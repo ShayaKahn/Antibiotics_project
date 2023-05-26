@@ -48,16 +48,27 @@ def calc_bray_curtis_dissimilarity(first_cohort, second_cohort, second_cohort_in
             num_samples_first = np.size(first_cohort, 0)
             num_samples_second = np.size(second_cohort, 0)
             mean_dist_vector = np.zeros(num_samples_second)
-            for i in range(0, num_samples_second):
-                if i in second_cohort_ind_dict:
-                    k = second_cohort_ind_dict[i]
+            if isinstance(second_cohort_ind_dict, dict):
+                for i in range(0, num_samples_second):
+                    if i in second_cohort_ind_dict:
+                        k = second_cohort_ind_dict[i]
+                        sample_dist = np.array([braycurtis(first_cohort[j, :], second_cohort[i, :]
+                                                           ) for j in range(0, num_samples_first) if j != k])
+                    else:
+                        sample_dist = np.array([braycurtis(first_cohort[j, :], second_cohort[i, :]
+                                                           ) for j in range(0, num_samples_first)])
+                    if median:  # measure median distance
+                        mean_dist_vector[i] = np.median(sample_dist)
+                    else:  # measure mean distance
+                        mean_dist_vector[i] = np.mean(sample_dist)
+            else:
+                for i in range(0, num_samples_second):
                     sample_dist = np.array([braycurtis(first_cohort[j, :], second_cohort[i, :]
-                                                       ) for j in range(0, num_samples_first) if j != k])
-                else:
-                    sample_dist = np.array([braycurtis(first_cohort[j, :], second_cohort[i, :]
-                                                       ) for j in range(0, num_samples_first)])
-                if median:  # measure median distance
-                    mean_dist_vector[i] = np.median(sample_dist)
-                else:  # measure mean distance
-                    mean_dist_vector[i] = np.mean(sample_dist)
+                                            ) for j in range(0, num_samples_first)])
+                    if median:  # measure median distance
+                        mean_dist_vector[i] = np.median(sample_dist)
+                    else:  # measure mean distance
+                        mean_dist_vector[i] = np.mean(sample_dist)
         return mean_dist_vector
+
+

@@ -15,24 +15,44 @@ class DOC:
             raise ValueError("ref_cohort should be a 2D numpy array")
         self.num_samples = cohort.shape[0]
 
-    def calc_doc(self):
+    #def calc_doc(self):
         """
         :return: matrix, the first row is the dissimilarity values for all the sample pairs of the
          cohort, the second row is for the overlap.
         """
         # Calculate overlap values
-        o = [[Overlap(self.cohort[j, :], self.cohort[i, :]).calculate_overlap() for i in range(
-            j + 1, self.num_samples)] for j in range(0, self.num_samples - 1)]
+    #    o = [[Overlap(self.cohort[j, :], self.cohort[i, :]).calculate_overlap() for i in range(
+    #        j + 1, self.num_samples)] for j in range(0, self.num_samples - 1)]
         # Calculate dissimilarity values
-        d = [[Dissimilarity(self.cohort[j, :], self.cohort[i, :]).calculate_dissimilarity() for i in range(
-            j + 1, self.num_samples)] for j in range(0, self.num_samples - 1)]
+    #    d = [[Dissimilarity(self.cohort[j, :], self.cohort[i, :]).calculate_dissimilarity() for i in range(
+    #        j + 1, self.num_samples)] for j in range(0, self.num_samples - 1)]
 
         # Organize the structure
-        def flatten(lis):
-            return [item for sublist in lis for item in sublist]
+    #    def flatten(lis):
+    #        return [item for sublist in lis for item in sublist]
 
-        o = np.array(flatten(o))
-        d = np.array(flatten(d))
+    #    o = np.array(flatten(o))
+    #    d = np.array(flatten(d))
+    #    doc_mat = np.vstack((o, d))
+
+    #    return doc_mat
+
+    def calc_doc(self):
+        """
+        :return: matrix, the first row is the dissimilarity values for all the sample pairs of the cohort,
+                 the second row is for the overlap.
+        """
+        num_samples = self.num_samples
+
+        # Calculate overlap values
+        o = np.array([Overlap(self.cohort[j, :], self.cohort[i, :]).calculate_overlap()
+                      for j in range(num_samples - 1) for i in range(j + 1, num_samples)])
+
+        # Calculate dissimilarity values
+        d = np.array([Dissimilarity(self.cohort[j, :], self.cohort[i, :]).calculate_dissimilarity()
+                      for j in range(num_samples - 1) for i in range(j + 1, num_samples)])
+
+        # Combine overlap and dissimilarity into a matrix
         doc_mat = np.vstack((o, d))
 
         return doc_mat
@@ -49,6 +69,7 @@ class DOC:
             resampled_doc = DOC(resampled_cohort)  # Initiate DOC
             bootstrap_mat_container.append(resampled_doc.calc_doc())  # Apply DOC
         return bootstrap_mat_container
+
 
 
 
