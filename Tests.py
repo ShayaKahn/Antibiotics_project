@@ -4,6 +4,8 @@ from idoa import IDOA
 import numpy as np
 from BrayCurtis import BC
 from BC import calc_bray_curtis_dissimilarity
+import pandas as pd
+from OTU_fit import OtuFit
 class TestOptimalCohort(unittest.TestCase):
     """
     This class tests the OptimalCohort class.
@@ -193,3 +195,25 @@ class TestBC(unittest.TestCase):
                                              self.bc_cohort_not_included_vector_test)), 0, places)
         self.assertAlmostEqual(float(np.mean(self.bc_identical_vector -
                                self.bc_identical_vector_test)), 0, places)
+
+class TestOTUFit(unittest.TestCase):
+    def setUp(self) -> None:
+        self.ref_cohort = pd.DataFrame({'Species': ['A', 'B', 'D', 'C'], 1: [0.3, 0.3, 0.1, 0.3],
+                                        2: [0.5, 0.5, 0, 0], 3: [0.1, 0, 0.8, 0.1],
+                                        4: [1, 0, 0, 0]})
+
+        self.cohort = pd.DataFrame({'Species': ['B', 'C', 'D'], 1: [0.4, 0.3, 0.3],
+                                    2: [1, 0, 0], 3: [0, 0.2, 0.8], 4: [0, 0.5, 0.5]})
+
+        print(self.ref_cohort)
+        print(self.cohort)
+
+        self.OtuPipeline_object = OtuFit(self.ref_cohort, self.cohort, threshold=0.99)
+
+    def test_pipe(self):
+        sub_ref_OTU, sub_OTU = self.OtuPipeline_object.pipe()
+        print(self.OtuPipeline_object.fraction_ref_OTU)
+        print(self.OtuPipeline_object.fraction_OTU)
+
+
+

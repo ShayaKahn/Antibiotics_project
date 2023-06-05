@@ -8,7 +8,7 @@ class IDOA:
     This class calculates the IDOA values vector for a cohort or the IDOA value for a sample
     with respect to a reference cohort.
     """
-    def __init__(self, ref_cohort, cohort, min_overlap=0.5, max_overlap=1, zero_overlap=0.1, pos=True,
+    def __init__(self, ref_cohort, cohort, min_overlap=0.5, max_overlap=1, zero_overlap=0.1, pos=False,
                  identical=False, min_num_points=0, percentage=None):
         """
         :param ref_cohort: The reference cohort, samples are in the rows.
