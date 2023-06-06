@@ -37,7 +37,6 @@ class BC:
         self.num_samples_ref_cohort = ref_cohort.shape[0]
         self.cohort_ind_dict = cohort_ind_dict
         if self.cohort_ind_dict:
-            print('a')
             if self.num_samples_cohort == 1:
                 if not isinstance(self.cohort_ind_dict, tuple):
                     raise ValueError("cohort_ind_dict should be a tuple if cohort is a vector")

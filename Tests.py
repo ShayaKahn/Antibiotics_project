@@ -6,6 +6,7 @@ from BrayCurtis import BC
 from BC import calc_bray_curtis_dissimilarity
 import pandas as pd
 from OTU_fit import OtuFit
+from IDOA_D_after_perturbation import IDOA_D
 class TestOptimalCohort(unittest.TestCase):
     """
     This class tests the OptimalCohort class.
@@ -214,6 +215,20 @@ class TestOTUFit(unittest.TestCase):
         sub_ref_OTU, sub_OTU = self.OtuPipeline_object.pipe()
         print(self.OtuPipeline_object.fraction_ref_OTU)
         print(self.OtuPipeline_object.fraction_OTU)
+
+class Test_IDOA_D(unittest.TestCase):
+    def setUp(self) -> None:
+        self.sample = np.array([0.1, 0, 0.2, 0.4, 0, 0, 0.1, 0.2])
+        self.cohort = np.array([[0, 0.1, 0.3, 0.4, 0.1, 0.1, 0, 0],
+                                [0.1, 0.1, 0.1, 0.3, 0.2, 0, 0, 0.2],
+                                [0.5, 0, 0.2, 0.2, 0, 0, 0.1, 0]])
+        print(np.shape(self.cohort))
+        print(np.shape(self.sample))
+
+    def test_calculate_values(self):
+        IDOA_D_object = IDOA_D(self.sample, self.cohort, min_overlap=0.5, max_overlap=1, zero_overlap=0.1, pos=False,
+                identical=False, min_num_points=0, percentage=None, ind=(0, ), median=False)
+        print(IDOA_D_object.calculate_values())
 
 
 
