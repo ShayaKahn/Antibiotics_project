@@ -7,6 +7,10 @@ from BC import calc_bray_curtis_dissimilarity
 import pandas as pd
 from OTU_fit import OtuFit
 from IDOA_D_after_perturbation import IDOA_D
+from GLV_model import GLV
+from overlap import Overlap
+import matplotlib.pyplot as plt
+
 class TestOptimalCohort(unittest.TestCase):
     """
     This class tests the OptimalCohort class.
@@ -230,5 +234,20 @@ class Test_IDOA_D(unittest.TestCase):
                 identical=False, min_num_points=0, percentage=None, ind=(0, ), median=False)
         print(IDOA_D_object.calculate_values())
 
+class Test_GLV(unittest.TestCase):
+    def setUp(self) -> None:
+        self.glv = GLV(n_samples=10, n_species=30, delta=1e-2, final_time=10,
+                       max_step=0.2, p_mat=0.1, p_init=0.8, p_alt_init=0.5, sigma=0.2)
 
+    def test_solve(self):
+        final_abundances = self.glv.solve()
+
+class Test_Overlap(unittest.TestCase):
+    def setUp(self) -> None:
+        self.first_sample = np.array([0.1, 0, 0.2, 0.4, 0, 0, 0.1, 0.2])
+        self.second_sample = np.array([0.1, 0, 0.2, 0.4, 0.1, 0, 0, 0.2])
+
+    def test_calculate_overlap(self):
+        overlap = Overlap(self.first_sample, self.second_sample, overlap_type='Jaccard').calculate_overlap()
+        print(overlap)
 
