@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.integrate import solve_ivp
-import matplotlib.pyplot as plt
 
 class GLV:
     """
@@ -21,22 +20,59 @@ class GLV:
         """
         self.smp = n_samples
         self.n = n_species
-        self.delta = delta
-        self.r = self._create_r_vector()
-        self.s = self._create_s_vector()
+        try:
+            assert(self.smp > 0)
+            assert(self.n > 0)
+            assert isinstance(self.smp, int)
+            assert isinstance(self.n, int)
+        except AssertionError:
+            raise ValueError("n_samples and n_species should be positive integers")
         self.p_mat = p_mat
         self.p_init = p_init
         self.p_alt_init = p_alt_init
+        try:
+            assert(0 <= p_mat <= 1)
+            assert(0 <= p_init <= 1)
+            assert(0 <= p_alt_init <= 1)
+        except AssertionError:
+            raise ValueError("p_mat, p_init and p_alt_init should be between 0 and 1")
+        self.delta = delta
         self.sigma = sigma
+        try:
+            assert(delta > 0)
+            assert(sigma > 0)
+            assert isinstance(delta, (float, int))
+            assert isinstance(sigma, (float, int))
+        except AssertionError:
+            raise ValueError("delta and sigma should be positive numbers")
         self.final_time = final_time
         self.max_step = max_step
+        try:
+            assert(final_time > 0)
+            assert(max_step > 0)
+            assert isinstance(final_time, (float, int))
+            assert isinstance(max_step, (float, int))
+            assert(final_time > max_step)
+        except AssertionError:
+            raise ValueError("final_time and max_step should be positive numbers and final_time > max_step")
+        self.r = self._create_r_vector()
+        self.s = self._create_s_vector()
         self.A = self._create_interaction_matrix()
         self.Y = self._create_set_of_initial_conditions()
+        self.Y_alt = self._create_alt_set_of_initial_conditions()
 
-    def solve(self):
+    def solve(self, perturbation=False):
         """
         This function updates the final abundances, rows are the species and columns represent the samples.
         """
+        try:
+            assert isinstance(perturbation, bool)
+        except AssertionError:
+            raise ValueError('perturbation must be boolean')
+        if perturbation:
+            Y = self.Y_alt
+        else:
+            Y = self.Y
         def f(t, x):
             """
             GLV formula.
@@ -48,7 +84,6 @@ class GLV:
             """
             Event function that triggers when dxdt is close to steady state.
             """
-            #print(max(abs(f(t, x))) - self.delta)
             return max(abs(f(t, x))) - self.delta
 
         Final_abundances = np.zeros((self.n, self.smp))
@@ -56,6 +91,7 @@ class GLV:
 
         if self.smp > 1:  # Solution for cohort.
             for m in range(self.smp):
+                print(m)
                 # Get the index at which the event occurred.
                 event_idx = None
 
@@ -65,15 +101,14 @@ class GLV:
 
                     # solve GLV up to time span.
                     sol = solve_ivp(f, (0 + t_temp, self.final_time + t_temp),
-                                    self.Y[:][m], max_step=self.max_step, events=event)
-
+                                    Y[:][m], max_step=self.max_step, events=event)
 
                     if len(sol.t_events[0]) > 0:
                         event_time = sol.t_events[0][0]
                         event_idx = np.argmin(np.abs(sol.t - event_time))
                         Final_abundances[:, m] = sol.y[:, event_idx]
                     else:
-                         self.Y[:][m] = sol.y[:, -1]
+                         Y[:][m] = sol.y[:, -1]
                          t_temp = sol.t[-1]
 
             Final_abundances = self._normalize_results(Final_abundances)
@@ -88,14 +123,14 @@ class GLV:
             while event_idx is None:
 
                 sol = solve_ivp(f, (0 + t_temp, self.final_time + t_temp),
-                                self.Y[:], max_step=self.max_step, events=event)
+                                Y[:], max_step=self.max_step, events=event)
 
                 if len(sol.t_events[0]) > 0:
                     event_time = sol.t_events[0][0]
                     event_idx = np.argmin(np.abs(sol.t - event_time))
                     Final_abundances_single_sample[:] = sol.y[:, event_idx]
                 else:
-                    self.Y[:] = sol.y[:, -1]
+                    Y[:] = sol.y[:, -1]
                     t_temp = sol.t[-1]
 
                 # Save the solution up to the event time
@@ -161,3 +196,6 @@ class GLV:
                     if np.random.uniform(0, 1) < self.p_alt_init:
                         y[i] = 0
         return alt_init_cond_set
+
+    def solve_alt(self):
+        pass

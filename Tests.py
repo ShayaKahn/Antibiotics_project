@@ -236,11 +236,14 @@ class Test_IDOA_D(unittest.TestCase):
 
 class Test_GLV(unittest.TestCase):
     def setUp(self) -> None:
-        self.glv = GLV(n_samples=10, n_species=30, delta=1e-2, final_time=10,
-                       max_step=0.2, p_mat=0.1, p_init=0.8, p_alt_init=0.5, sigma=0.2)
+        self.glv = GLV(n_samples=100, n_species=100, delta=1e-2, final_time=1,
+                       max_step=0.2, p_mat=0.1, p_init=0.8, p_alt_init=0.2, sigma=0.2)
 
     def test_solve(self):
         final_abundances = self.glv.solve()
+        final_abundances_perturb = self.glv.solve(perturbation=True)
+        print(final_abundances)
+        print(final_abundances_perturb)
 
 class Test_Overlap(unittest.TestCase):
     def setUp(self) -> None:
