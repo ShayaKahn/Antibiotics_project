@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import solve_ivp
+from glv_functions import f, event
 
 class GLV:
     """
@@ -62,47 +63,36 @@ class GLV:
         self.Y_alt = self._create_alt_set_of_initial_conditions()
 
     def solve(self, perturbation=False):
-        """
-        This function updates the final abundances, rows are the species and columns represent the samples.
-        """
+        # This function updates the final abundances, rows are the samples and columns represent the species.
         try:
             assert isinstance(perturbation, bool)
         except AssertionError:
             raise ValueError('perturbation must be boolean')
-        if perturbation:
-            Y = self.Y_alt
-        else:
-            Y = self.Y
-        def f(t, x):
-            """
-            GLV formula.
-            """
-            return np.array([self.r[i] * x[i] - self.s[i] * x[i] ** 2 + sum([self.A[i, p] * x[
-                i] * x[p] for p in range(self.n) if p != i]) for i in range(self.n)])
 
-        def event(t, x):
-            """
-            Event function that triggers when dxdt is close to steady state.
-            """
-            return max(abs(f(t, x))) - self.delta
+        Y = self.Y_alt if perturbation else self.Y
 
         Final_abundances = np.zeros((self.n, self.smp))
         Final_abundances_single_sample = np.zeros(self.n)
 
         if self.smp > 1:  # Solution for cohort.
             for m in range(self.smp):
-                print(m)
-                # Get the index at which the event occurred.
+
                 event_idx = None
 
                 t_temp = 0
 
                 while event_idx is None:
 
-                    # solve GLV up to time span.
-                    sol = solve_ivp(f, (0 + t_temp, self.final_time + t_temp),
-                                    Y[:][m], max_step=self.max_step, events=event)
+                    # Set the parameters to the functions f and event.
+                    f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), self.A.view(), self.delta)
+                    event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(),
+                                                           self.A.view(), self.delta)
 
+                    # solve GLV.
+                    sol = solve_ivp(f_with_params, (0 + t_temp, self.final_time + t_temp),
+                                    Y[m, :], max_step=self.max_step, events=event_with_params)
+
+                    # Check if the steady state was reached.
                     if len(sol.t_events[0]) > 0:
                         event_time = sol.t_events[0][0]
                         event_idx = np.argmin(np.abs(sol.t - event_time))
@@ -111,6 +101,7 @@ class GLV:
                          Y[:][m] = sol.y[:, -1]
                          t_temp = sol.t[-1]
 
+            # Normalize the results.
             Final_abundances = self._normalize_results(Final_abundances)
             return Final_abundances
 
@@ -122,9 +113,16 @@ class GLV:
 
             while event_idx is None:
 
-                sol = solve_ivp(f, (0 + t_temp, self.final_time + t_temp),
-                                Y[:], max_step=self.max_step, events=event)
+                # Set the parameters to the functions f and event.
+                f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), self.A.view(), self.delta)
+                event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(),
+                                                       self.A.view(), self.delta)
 
+                # solve GLV.
+                sol = solve_ivp(f_with_params, (0 + t_temp, self.final_time + t_temp),
+                                Y[:], max_step=self.max_step, events=event_with_params)
+
+                # Check if the steady state was reached.
                 if len(sol.t_events[0]) > 0:
                     event_time = sol.t_events[0][0]
                     event_idx = np.argmin(np.abs(sol.t - event_time))
@@ -133,14 +131,12 @@ class GLV:
                     Y[:] = sol.y[:, -1]
                     t_temp = sol.t[-1]
 
-                # Save the solution up to the event time
+            # Save the solution up to the event time
             Final_abundances_single_sample = self._normalize_results(Final_abundances_single_sample)
         return Final_abundances_single_sample
 
     def _normalize_results(self, final_abundances):
-        """
-        Normalization of the final abundances.
-        """
+        # Normalization of the final abundances.
         if self.smp > 1:  # Normalization for cohort
             norm_factors = np.sum(final_abundances, axis=0)
             final_abundances_norm = np.array([final_abundances[:, i] / norm_factors[i] for i in range(
@@ -152,32 +148,30 @@ class GLV:
             return final_abundances_norm
 
     def _create_interaction_matrix(self):
-        interaction_matrix = np.zeros([self.n, self.n])
-        for row, col in np.ndindex(interaction_matrix.shape):
-            if np.random.uniform(0, 1) < self.p_mat:
-                interaction_matrix[row, col] = np.random.normal(0, self.sigma)
-            else:
-                interaction_matrix[row, col] = 0
+        # Create interaction matrix.
+        interaction_matrix = np.zeros((self.n, self.n))
+        random_values = np.random.uniform(0, 1, (self.n, self.n))
+        mask = random_values < self.p_mat
+        interaction_matrix[mask] = np.random.normal(0, self.sigma, size=mask.sum())
         return interaction_matrix
+
     def _create_noisy_interaction_matrix(self):
         pass
 
     def _create_set_of_initial_conditions(self):
+        # Create initial conditions for the cohort.
         if self.smp != 1:
-            init_cond_set = np.zeros([self.smp, self.n])
-            for y in init_cond_set:
-                for i in range(0, self.n):
-                    if np.random.uniform(0, 1) < self.p_init:
-                        y[i] = np.random.uniform(0, 1)
-                    else:
-                        y[i] = 0
+            init_cond_set = np.zeros((self.smp, self.n))
+            random_values = np.random.uniform(0, 1, (self.smp, self.n))
+            mask = random_values < self.p_init
+            init_cond_set[mask] = random_values[mask]
+        # Create initial conditions for single sample.
         else:
             init_cond_set = np.zeros(self.n)
-            for i in range(0, self.n):
-                if np.random.uniform(0, 1) < self.p_init:
-                    init_cond_set[i] = np.random.uniform(0, 1)
-                else:
-                    init_cond_set[i] = 0
+            random_values = np.random.uniform(0, 1, self.n)
+            mask = random_values < self.p_init
+            init_cond_set[mask] = random_values[mask]
+
         return init_cond_set
 
     def _create_r_vector(self):
@@ -189,13 +183,13 @@ class GLV:
         return s
 
     def _create_alt_set_of_initial_conditions(self):
+        # Creation of the alternative set of initial conditions, by species abundance of the current initial
+        #condition to zero with probability p_alt_init.
         alt_init_cond_set = self.Y.copy()
-        for y in alt_init_cond_set:
-            for i in range(0, self.n):
-                if y[i] != 0:
-                    if np.random.uniform(0, 1) < self.p_alt_init:
-                        y[i] = 0
-        return alt_init_cond_set
 
-    def solve_alt(self):
-        pass
+        non_zero_indices = np.nonzero(alt_init_cond_set)
+        random_values = np.random.uniform(0, 1, size=non_zero_indices[0].shape)
+        alt_init_cond_set[non_zero_indices] = np.where(random_values < self.p_alt_init, 0,
+                                                       alt_init_cond_set[non_zero_indices])
+
+        return alt_init_cond_set
