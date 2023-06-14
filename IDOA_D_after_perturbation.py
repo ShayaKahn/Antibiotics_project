@@ -18,6 +18,7 @@ class IDOA_D:
         self.ind = ind
         self.median = median
         self.new_cohort, self.new_sample = self._build_new_cohort_sample()
+        self.d_o_container = None
 
     def _find_non_zero(self):
         non_zero_index = np.nonzero(self.sample)
@@ -35,9 +36,11 @@ class IDOA_D:
         return mean_D
 
     def _calculate_idoa(self):
-        IDOA_val = IDOA(self.new_cohort, self.new_sample, self.min_overlap, self.max_overlap,
+        IDOA_object = IDOA(self.new_cohort, self.new_sample, self.min_overlap, self.max_overlap,
                         self.zero_overlap, self.pos, self.identical, self.min_num_points,
-                        self.percentage).calc_idoa_vector(self.ind)
+                        self.percentage)
+        IDOA_val = IDOA_object.calc_idoa_vector(self.ind)
+        self.d_o_container = IDOA_object.dissimilarity_overlap_container_no_constraint
         return IDOA_val
 
     def _calculate_BC(self):

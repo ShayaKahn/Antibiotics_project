@@ -9,6 +9,7 @@ from OTU_fit import OtuFit
 from IDOA_D_after_perturbation import IDOA_D
 from GLV_model import GLV
 from overlap import Overlap
+from Non_vanishing_BC import NonV
 import matplotlib.pyplot as plt
 from glv_functions import f
 
@@ -234,6 +235,7 @@ class Test_IDOA_D(unittest.TestCase):
         IDOA_D_object = IDOA_D(self.sample, self.cohort, min_overlap=0.5, max_overlap=1, zero_overlap=0.1, pos=False,
                 identical=False, min_num_points=0, percentage=None, ind=(0, ), median=False)
         print(IDOA_D_object.calculate_values())
+        print(IDOA_D_object.d_o_container)
 
 class Test_GLV(unittest.TestCase):
     def setUp(self) -> None:
@@ -241,8 +243,9 @@ class Test_GLV(unittest.TestCase):
                        max_step=0.2, p_mat=0.1, p_init=0.8, p_alt_init=0.2, sigma=0.2)
 
     def test_solve(self):
-        final_abundances = self.glv.solve()
-        final_abundances_perturb = self.glv.solve(perturbation=True)
+        #final_abundances = self.glv.solve()
+        #final_abundances_perturb_init = self.glv.solve(perturbation_init=True)
+        final_abundances_perturb_mat = self.glv.solve(perturbation_mat=True)
 
 class Test_Overlap(unittest.TestCase):
     def setUp(self) -> None:
@@ -253,3 +256,25 @@ class Test_Overlap(unittest.TestCase):
         overlap = Overlap(self.first_sample, self.second_sample, overlap_type='Jaccard').calculate_overlap()
         print(overlap)
 
+class Test_NonV(unittest.TestCase):
+    def setUp(self) -> None:
+        self.baseline_cohort = np.array([[0.1, 0.3, 0, 0.5, 0, 0.1, 0],
+                                         [0.2, 0.1, 0.1, 0, 0.3, 0.3, 0],
+                                         [0.5, 0, 0.1, 0, 0.1, 0.2, 0.1]])
+
+        self.baseline_sample = np.array([0.2, 0.2, 0, 0.4, 0, 0.2, 0])
+
+        self.future_sample = np.array([0.5, 0, 0.1, 0.4, 0, 0, 0])
+
+        self.ABX_set = np.array([[0.5, 0, 0, 0.5, 0, 0, 0],
+                                 [0, 0.4, 0, 0, 0.3, 0.3, 0],
+                                 [0.5, 0, 0, 0, 0.1, 0, 0.4]])
+
+        self.nonv = NonV(self.baseline_sample, self.ABX_set, self.future_sample, self.baseline_cohort)
+
+    def test_calculate_BC(self):
+        nonv_val = self.nonv.calculate_BC()
+        print(nonv_val)
+        print(self.nonv.baseline_sub_sample)
+        print(self.nonv.future_sub_sample)
+        print(self.nonv.shuffled_sample_list)

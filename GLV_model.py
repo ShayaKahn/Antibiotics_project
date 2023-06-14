@@ -7,7 +7,7 @@ class GLV:
     This class is responsible to solve the GLV model with verification of reaching the steady state
     for a given parameters.
     """
-    def __init__(self, n_samples, n_species, delta, final_time, max_step, p_mat, p_init, p_alt_init, sigma):
+    def __init__(self, n_samples, n_species, delta, final_time, max_step, p_mat, p_init, p_alt_init, sigma, factor=0.1):
         """
         :param n_samples: The number of samples you are need to compute.
         :param n_species: The number of species at each sample.
@@ -56,20 +56,29 @@ class GLV:
             assert(final_time > max_step)
         except AssertionError:
             raise ValueError("final_time and max_step should be positive numbers and final_time > max_step")
+        self.factor = factor
+        try:
+            assert(0 < factor < 1)
+            assert isinstance(factor, float)
+        except AssertionError:
+            raise ValueError("factor should be between 0 and 1")
         self.r = self._create_r_vector()
         self.s = self._create_s_vector()
         self.A = self._create_interaction_matrix()
+        self.A_noise = self._create_noisy_interaction_matrix()
         self.Y = self._create_set_of_initial_conditions()
         self.Y_alt = self._create_alt_set_of_initial_conditions()
 
-    def solve(self, perturbation=False):
+    def solve(self, perturbation_init=False, perturbation_mat=False):
         # This function updates the final abundances, rows are the samples and columns represent the species.
         try:
-            assert isinstance(perturbation, bool)
+            assert isinstance(perturbation_init, bool)
         except AssertionError:
             raise ValueError('perturbation must be boolean')
 
-        Y = self.Y_alt if perturbation else self.Y
+        Y = self.Y_alt if perturbation_init else self.Y
+
+        A = self.A_noise if perturbation_mat else self.A
 
         Final_abundances = np.zeros((self.n, self.smp))
         Final_abundances_single_sample = np.zeros(self.n)
@@ -84,9 +93,8 @@ class GLV:
                 while event_idx is None:
 
                     # Set the parameters to the functions f and event.
-                    f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), self.A.view(), self.delta)
-                    event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(),
-                                                           self.A.view(), self.delta)
+                    f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), A.view(), self.delta)
+                    event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(), A.view(), self.delta)
 
                     # solve GLV.
                     sol = solve_ivp(f_with_params, (0 + t_temp, self.final_time + t_temp),
@@ -107,6 +115,10 @@ class GLV:
 
         else:  # Solution for single sample.
 
+            Y = self.Y_alt if perturbation_init else self.Y
+
+            A = self.A_noise if perturbation_mat else self.A
+
             event_idx = None
 
             t_temp = 0
@@ -114,9 +126,8 @@ class GLV:
             while event_idx is None:
 
                 # Set the parameters to the functions f and event.
-                f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), self.A.view(), self.delta)
-                event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(),
-                                                       self.A.view(), self.delta)
+                f_with_params = lambda t, x: f(t, x, self.r.view(), self.s.view(), A.view(), self.delta)
+                event_with_params = lambda t, x: event(t, x, self.r.view(), self.s.view(), A.view(), self.delta)
 
                 # solve GLV.
                 sol = solve_ivp(f_with_params, (0 + t_temp, self.final_time + t_temp),
@@ -156,7 +167,12 @@ class GLV:
         return interaction_matrix
 
     def _create_noisy_interaction_matrix(self):
-        pass
+        noisy_interaction_matrix = np.zeros((self.n, self.n))
+        random_values = np.random.uniform(0, 1, (self.n, self.n))
+        mask = random_values < self.p_mat
+        noisy_interaction_matrix[mask] = np.random.normal(0, self.sigma * self.factor, size=mask.sum())
+        total_noisy_interaction_matrix = self.A.copy() + noisy_interaction_matrix
+        return total_noisy_interaction_matrix
 
     def _create_set_of_initial_conditions(self):
         # Create initial conditions for the cohort.
