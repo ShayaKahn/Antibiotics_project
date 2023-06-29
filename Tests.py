@@ -10,6 +10,7 @@ from IDOA_D_after_perturbation import IDOA_D
 from GLV_model import GLV
 from overlap import Overlap
 from Non_vanishing_BC import NonV
+from Jaccard_disappeared_species import JaccardDisappearedSpecies
 import matplotlib.pyplot as plt
 from glv_functions import f
 
@@ -262,13 +263,15 @@ class Test_NonV(unittest.TestCase):
                                          [0.2, 0.1, 0.1, 0, 0.3, 0.3, 0],
                                          [0.5, 0, 0.1, 0, 0.1, 0.2, 0.1]])
 
-        self.baseline_sample = np.array([0.2, 0.2, 0, 0.4, 0, 0.2, 0])
+        self.baseline_sample = np.array([0.2, 0, 0.2, 0.4, 0, 0.1, 0.1])
 
-        self.future_sample = np.array([0.5, 0, 0.1, 0.4, 0, 0, 0])
+        self.future_sample = np.array([0.5, 0, 0.1, 0.3, 0.05, 0, 0.05])
 
         self.ABX_set = np.array([[0.5, 0, 0, 0.5, 0, 0, 0],
-                                 [0, 0.4, 0, 0, 0.3, 0.3, 0],
-                                 [0.5, 0, 0, 0, 0.1, 0, 0.4]])
+                                 [0.1, 0.3, 0, 0, 0.3, 0.3, 0],
+                                 [0.5, 0, 0, 0, 0.1, 0, 0]])
+
+        #self.ABX_set = np.array([0.5, 0, 0, 0.5, 0, 0, 0])
 
         self.nonv = NonV(self.baseline_sample, self.ABX_set, self.future_sample, self.baseline_cohort)
 
@@ -278,3 +281,20 @@ class Test_NonV(unittest.TestCase):
         print(self.nonv.baseline_sub_sample)
         print(self.nonv.future_sub_sample)
         print(self.nonv.shuffled_sample_list)
+
+class Test_JaccardDisappearedSpecies(unittest.TestCase):
+    def setUp(self) -> None:
+        self.baseline_sample = np.array([0.1, 0, 0.2, 0.3, 0.1, 0, 0.1, 0.2])
+        self.future_sample = np.array([0.2, 0, 0.1, 0.2, 0.1, 0.1, 0.1, 0.2])
+        self.ABX_sample = np.array([0, 0, 0, 0, 0, 0, 0.5, 0.5])
+        self.external_sample = np.array([0, 0.1, 0.3, 0.2, 0, 0.1, 0.1, 0.2])
+
+    def test_calculate_jaccard(self):
+        jaccard_external_object = JaccardDisappearedSpecies(self.baseline_sample, self.future_sample,
+                                            self.ABX_sample)
+        jaccard_external = jaccard_external_object.calc_jaccard(self.external_sample)
+        print(jaccard_external)
+        print(jaccard_external_object.jaccard_subject)
+        print(jaccard_external_object.non_ARS)
+        print(jaccard_external_object.sub_base_sample)
+        print(jaccard_external_object.sub_future_sample)

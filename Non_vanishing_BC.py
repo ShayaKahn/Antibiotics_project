@@ -8,8 +8,7 @@ class NonV:
         self.Future_sample = Future_sample
         self.Baseline_cohort = Baseline_cohort
         self.intersection = self._find_intersection()
-        self.non_vanishing_index = self._find_non_vanish()
-        #self.vanishing_index = self._find_vanish()
+        self.vanishing_index = self._find_vanish()
         self.baseline_sub_sample, self.future_sub_sample = self._create_sub_samples()
         self.baseline_sub_sample = self._normalize_sample(self.baseline_sub_sample)
         self.future_sub_sample = self._normalize_sample(self.future_sub_sample)
@@ -17,8 +16,6 @@ class NonV:
         self.shuffled_sample_list = []
         for i in range(mean_num):
             self.shuffled_sample_list.append(self._normalize_sample(self._create_shuffled_sample()))
-        #self.shuffled_sample = self._create_shuffled_sample()
-        #self.shuffled_sample = self._normalize_sample(self.shuffled_sample)
 
     def _find_intersection(self):
         non_zero_baseline_sample = np.nonzero(self.Baseline_sample)
@@ -26,21 +23,20 @@ class NonV:
         intersection = np.intersect1d(non_zero_baseline_sample, non_zero_future_sample)
         return intersection
 
-    def _find_non_vanish(self):
-        non_vanishing_index = np.where(np.any(self.ABX_set != 0, axis=0))[0]
-        return non_vanishing_index
-
-    #def _find_vanish(self):
-    #    vanishing_index = np.nonzero(np.any(self.ABX_set == 0, axis=0))[0]
-    #    return vanishing_index
+    def _find_vanish(self):
+        if self.ABX_set.ndim != 1:
+            vanishing_index = np.nonzero(np.any(self.ABX_set == 0, axis=0))[0]
+        else:
+            vanishing_index = np.where(self.ABX_set == 0)[0]
+        return vanishing_index
 
     def _create_sub_samples(self):
-        baseline_sub_sample = self.Baseline_sample[self.non_vanishing_index]
-        future_sub_sample = self.Future_sample[self.non_vanishing_index]
+        baseline_sub_sample = self.Baseline_sample[self.vanishing_index]
+        future_sub_sample = self.Future_sample[self.vanishing_index]
         return baseline_sub_sample, future_sub_sample
 
     def _create_sub_baseline_cohort(self):
-        sub_baseline_cohort = self.Baseline_cohort[:, self.non_vanishing_index]
+        sub_baseline_cohort = self.Baseline_cohort[:, self.vanishing_index]
         return sub_baseline_cohort
 
     def _create_shuffled_sample(self):
@@ -50,12 +46,13 @@ class NonV:
 
     @staticmethod
     def _normalize_sample(sample):
-        cohort_normalized = sample / np.sum(sample)
-        return cohort_normalized
+        if np.all(sample == 0):
+            return sample
+        else:
+            sample_normalized = sample / np.sum(sample)
+        return sample_normalized
 
     def calculate_BC(self):
-        #print(self.baseline_sub_sample)
-        #print(self.future_sub_sample)
         bc_real = braycurtis(self.baseline_sub_sample, self.future_sub_sample)
         bc_shuffled_mean = np.mean([braycurtis(
             self.baseline_sub_sample, sample) for sample in self.shuffled_sample_list])
