@@ -26,5 +26,3 @@ class JaccardDisappearedSpecies:
         jaccard_object_external = Overlap(self.sub_future_sample, sub_external_sample_base, overlap_type="Jaccard")
         jaccard_external = jaccard_object_external.calculate_overlap()
         return jaccard_external
-
-

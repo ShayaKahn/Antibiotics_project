@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 from sklearn.manifold import MDS
 from scipy.spatial.distance import cdist
 from Jaccard_disappeared_species import JaccardDisappearedSpecies
+from compare_to_shuffled import ShuffledVsNormal
 
 # Functions
 def normalize_cohort(cohort):
@@ -36,8 +37,8 @@ def create_barplots(baseline_cohort, end_cohort, overlap_type, names, rows, cols
     for sample_future in end_cohort:
         sample_results = []
         for sample_base in baseline_cohort:
-            object = Overlap(sample_base, sample_future, overlap_type=overlap_type)
-            sample_results.append(object.calculate_overlap())
+            J_object = Overlap(sample_base, sample_future, overlap_type=overlap_type)
+            sample_results.append(J_object.calculate_overlap())
         results.append(sample_results)
 
     x = np.arange(1, len(names)+1, 1)
@@ -55,8 +56,14 @@ def create_barplots(baseline_cohort, end_cohort, overlap_type, names, rows, cols
             go.Bar(x=[x[i]], y=[result[i]], marker_color='red', name='Selected Result'),
             row=row, col=col)
 
+        # Update x-axis properties for all subplots
+    similarity_barplots.update_xaxes(linecolor='black', linewidth=2, mirror=False)
+
+    # Update y-axis properties for all subplots
+    similarity_barplots.update_yaxes(linecolor='black', linewidth=2, mirror=False)
+
     # Update layout
-    similarity_barplots.update_layout(height=1000, width=1200, showlegend=False)
+    similarity_barplots.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
     return similarity_barplots, results
 
 def confidence_ellipse(x, y, n_std=1.96, size=100, **kwargs):
@@ -465,7 +472,14 @@ for i, result in enumerate(Jaccard_sets_container):
         row=row, col=col)
 
 # Update layout
-similarity_barplots_dis_first_data.update_layout(height=1000, width=1200, showlegend=False)
+# Update x-axis properties for all subplots
+similarity_barplots_dis_first_data.update_xaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update y-axis properties for all subplots
+similarity_barplots_dis_first_data.update_yaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update layout
+similarity_barplots_dis_first_data.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
 
 # No strict
 
@@ -492,7 +506,14 @@ for i, result in enumerate(Jaccard_sets_container_ns):
         row=row, col=col)
 
 # Update layout
-similarity_barplots_dis_first_data_ns.update_layout(height=1000, width=1200, showlegend=False)
+# Update x-axis properties for all subplots
+similarity_barplots_dis_first_data_ns.update_xaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update y-axis properties for all subplots
+similarity_barplots_dis_first_data_ns.update_yaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update layout
+similarity_barplots_dis_first_data_ns.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
 
 nonzero_list_ABX = []
 nonzero_list_ABX_counts = []
@@ -558,6 +579,7 @@ delta_Jaccard_vs_num_abx.update_layout(
     yaxis={'title': 'Filtered Jaccard'},
     width=500,
     height=500,
+    plot_bgcolor='white'
 )
 
 # Define the coordinates for the black lines
@@ -686,9 +708,87 @@ line_trace_12 = go.Scatter(
 similarity_barplots_overlap = create_barplots(baseline_cohort, Future_cohort, "Overlap", names, rows=7, cols=3)[0]
 results_overlap = np.vstack(create_barplots(baseline_cohort, Future_cohort, "Overlap", names, rows=7, cols=3)[1])
 
+# No strict
+
+results = []
+
+for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_cohort, Future_cohort,
+                                                            ABX_cohort)):
+    J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
+                                Baseline_cohort=baseline_cohort, index=idx, mean_num=10)
+    results.append(J_object.Jaccard())
+
+real_vals, shuffled_vals = zip(*results)
+real_vals = np.array(real_vals)
+shuffled_vals = np.array(shuffled_vals)
+
+shuffled_vs_real_first_data = go.Figure()
+
+shuffled_vs_real_first_data.add_trace(go.Scatter(x=real_vals[:6],
+                                                 y=shuffled_vals[:6], mode='markers', name='aFMT',
+                                                 marker=dict(color='grey')))
+shuffled_vs_real_first_data.add_trace(go.Scatter(x=real_vals[6:14],
+                                                 y=shuffled_vals[6:14], mode='markers', name='Probiotics',
+                                                 marker=dict(color='red')))
+shuffled_vs_real_first_data.add_trace(go.Scatter(x=real_vals[14:],
+                                                 y=shuffled_vals[14:], mode='markers', name='Spontaneous',
+                                                 marker=dict(color='blue')))
+
+shuffled_vs_real_first_data.update_layout(
+    xaxis=dict(title='Jaccard Real', title_font=dict(size=17.5), linecolor='black', linewidth=2, mirror=False),
+    yaxis=dict(title='Jaccard Shuffled', title_font=dict(size=17.5), linecolor='black', linewidth=2, mirror=False),
+    title=dict(text='ABX - no strict', font=dict(size=20)),
+    xaxis_range=[0, 1],
+    yaxis_range=[0, 1],
+    shapes=[dict(type='line', x0=0, y0=0, x1=1, y1=1, line=dict(dash='dash', color='black'))],
+    width=500,
+    height=500,
+    legend=dict(x=0.02, y=0.98, xanchor='left', yanchor='top', font=dict(size=15)),
+    plot_bgcolor='white'
+)
+
+# Strict
+
+results = []
+
+for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_cohort, Future_cohort,
+                                                            ABX_cohort)):
+    J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
+                                Baseline_cohort=baseline_cohort, index=idx, strict=True, mean_num=10)
+    results.append(J_object.Jaccard())
+
+real_vals, shuffled_vals = zip(*results)
+real_vals = np.array(real_vals)
+shuffled_vals = np.array(shuffled_vals)
+
+shuffled_vs_real_first_data_strict = go.Figure()
+
+shuffled_vs_real_first_data_strict.add_trace(go.Scatter(x=real_vals[:6],
+                                                 y=shuffled_vals[:6], mode='markers', name='aFMT',
+                                                        marker=dict(color='grey')))
+shuffled_vs_real_first_data_strict.add_trace(go.Scatter(x=real_vals[6:14],
+                                                 y=shuffled_vals[6:14], mode='markers', name='Probiotics',
+                                                        marker=dict(color='red')))
+shuffled_vs_real_first_data_strict.add_trace(go.Scatter(x=real_vals[14:],
+                                                 y=shuffled_vals[14:], mode='markers', name='Spontaneous',
+                                                        marker=dict(color='blue')))
+
+shuffled_vs_real_first_data_strict.update_layout(
+    xaxis=dict(title='Jaccard Real', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    yaxis=dict(title='Jaccard Shuffled', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    title=dict(text='ABX - no strict', font=dict(size=20)),
+    xaxis_range=[0, 1],
+    yaxis_range=[0, 1],
+    shapes=[dict(type='line', x0=0, y0=0, x1=1, y1=1, line=dict(dash='dash', color='black'))],
+    width=500,
+    height=500,
+    legend=dict(x=0.02, y=0.98, xanchor='left', yanchor='top', font=dict(size=17.5)),
+    plot_bgcolor='white'
+)
+
 ### Recovery of gut microbiota of healthy adults following antibiotic exposure ###
 
-rel_abund_rarefied = pd.read_csv('annotated.mOTU.rel_abund.rarefied.tsv',sep='\t')
+rel_abund_rarefied = pd.read_csv('annotated.mOTU.rel_abund.rarefied.tsv', sep='\t')
 
 rel_abund_rarefied = filter_data(rel_abund_rarefied)
 
@@ -853,8 +953,15 @@ for i, result in enumerate(Jaccard_sets_container):
         go.Bar(x=[x[i]], y=[result[i]], marker_color='red', name='Selected Result'),
         row=row, col=col)
 
+# Update x-axis properties for all subplots
+similarity_barplots_dis.update_xaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update y-axis properties for all subplots
+similarity_barplots_dis.update_yaxes(linecolor='black', linewidth=2, mirror=False)
+
 # Update layout
-similarity_barplots_dis.update_layout(height=1000, width=1200, showlegend=False)
+similarity_barplots_dis.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
+
 
 # No strict
 
@@ -880,15 +987,86 @@ for i, result in enumerate(Jaccard_sets_container_ns):
         go.Bar(x=[x[i]], y=[result[i]], marker_color='red', name='Selected Result'),
         row=row, col=col)
 
+# Update x-axis properties for all subplots
+similarity_barplots_dis_ns.update_xaxes(linecolor='black', linewidth=2, mirror=False)
+
+# Update y-axis properties for all subplots
+similarity_barplots_dis_ns.update_yaxes(linecolor='black', linewidth=2, mirror=False)
+
 # Update layout
-similarity_barplots_dis_ns.update_layout(height=1000, width=1200, showlegend=False)
+similarity_barplots_dis_ns.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
 
 delta_Jaccard_vs_num_abx.update_layout(
     xaxis={'title': 'Number of Resistant Species'},
     yaxis={'title': 'Filtered Jaccard'},
     width=500,
     height=500,
+    plot_bgcolor='white'
 )
+
+# Compare Binary Jaccard index between real and shuffled samples without including ARS species
+
+# No strict
+
+results = []
+
+for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
+                                                            rel_abund_rarefied_8)):
+    J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
+                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, mean_num=10)
+    results.append(J_object.Jaccard())
+
+real_vals, shuffled_vals = zip(*results)
+real_vals = np.array(real_vals)
+shuffled_vals = np.array(shuffled_vals)
+
+shuffled_vs_real = go.Figure()
+
+shuffled_vs_real.add_trace(go.Scatter(x=real_vals, y=shuffled_vals, mode='markers', marker=dict(color='blue')))
+
+shuffled_vs_real.update_layout(
+    xaxis=dict(title='Jaccard Real', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    yaxis=dict(title='Jaccard Shuffled', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    title=dict(text='ABX - no strict', font=dict(size=20)),
+    xaxis_range=[0, 1],
+    yaxis_range=[0, 1],
+    shapes=[dict(type='line', x0=0, y0=0, x1=1, y1=1, line=dict(dash='dash', color='black'))],
+    width=500,
+    height=500,
+    plot_bgcolor='white'
+)
+
+# Strict
+
+results = []
+
+for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
+                                                            rel_abund_rarefied_8)):
+    J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
+                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, strict=True, mean_num=10)
+    results.append(J_object.Jaccard())
+
+real_vals, shuffled_vals = zip(*results)
+real_vals = np.array(real_vals)
+shuffled_vals = np.array(shuffled_vals)
+
+shuffled_vs_real_strict = go.Figure()
+
+shuffled_vs_real_strict.add_trace(go.Scatter(x=real_vals, y=shuffled_vals, mode='markers', marker=dict(color='blue')))
+
+shuffled_vs_real_strict.update_layout(
+    xaxis=dict(title='Jaccard Real', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    yaxis=dict(title='Jaccard Shuffled', title_font=dict(size=15), linecolor='black', linewidth=2, mirror=False),
+    title=dict(text='ABX - strict', font=dict(size=20)),
+    xaxis_range=[0, 1],
+    yaxis_range=[0, 1],
+    shapes=[dict(type='line', x0=0, y0=0, x1=1, y1=1, line=dict(dash='dash', color='black'))],
+    width=500,
+    height=500,
+    plot_bgcolor='white'
+)
+
+# PCOA
 
 combined_data = np.vstack((baseline_rel_abund_rarefied, rel_abund_rarefied_4, rel_abund_rarefied_8,
                            rel_abund_rarefied_42, rel_abund_rarefied_180))
@@ -960,12 +1138,12 @@ app.layout = html.Div([
     #        }
     #    )
     #]),
-    html.Div([
-        html.H1(children='Overlap for all species')
-    ], className='header'),
-    html.Div([
-        dcc.Graph(figure=similarity_barplots_overlap)
-    ]),
+    #html.Div([
+    #    html.H1(children='Overlap for all species')
+    #], className='header'),
+    #html.Div([
+    #    dcc.Graph(figure=similarity_barplots_overlap)
+    #]),
     html.Div([
         html.H1(children='Non ARS strict')
     ], className='header'),
@@ -973,10 +1151,22 @@ app.layout = html.Div([
         dcc.Graph(figure=similarity_barplots_dis_first_data),
     ]),
     html.Div([
+        html.H1(children='Shuffled Jaccard compared to real Jaccard - strict')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=shuffled_vs_real_first_data_strict),
+    ]),
+    html.Div([
         html.H1(children='Non ARS not strict')
     ], className='header'),
     html.Div([
         dcc.Graph(figure=similarity_barplots_dis_first_data_ns),
+    ]),
+    html.Div([
+        html.H1(children='Shuffled Jaccard compared to real Jaccard - strict')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=shuffled_vs_real_first_data),
     ]),
     #html.Div([
     #dcc.Graph(
@@ -1002,11 +1192,35 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(figure=similarity_barplots_jaccard_recovery),
     ]),
+    #html.Div([
+    #    html.H1(children='Overlap for all species')
+    #], className='header'),
+    #html.Div([
+    #    dcc.Graph(figure=similarity_barplots_overlap_recovery),
+    #]),
     html.Div([
-        html.H1(children='Overlap for all species')
+        html.H1(children='Non ARS strict')
     ], className='header'),
     html.Div([
-        dcc.Graph(figure=similarity_barplots_overlap_recovery),
+        dcc.Graph(figure=similarity_barplots_dis),
+    ]),
+    html.Div([
+        html.H1(children='Shuffled Jaccard compared to real Jaccard - strict')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=shuffled_vs_real_strict),
+    ]),
+    html.Div([
+        html.H1(children='Non ARS not strict')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=similarity_barplots_dis_ns),
+    ]),
+    html.Div([
+        html.H1(children='Shuffled Jaccard compared to real Jaccard')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=shuffled_vs_real),
     ]),
     html.Div([
         html.H1(children='PCoA')
@@ -1017,18 +1231,6 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(figure=delta_Jaccard_vs_num_abx),
     ]),
-    html.Div([
-        html.H1(children='Non ARS strict')
-    ], className='header'),
-    html.Div([
-        dcc.Graph(figure=similarity_barplots_dis),
-    ]),
-    html.Div([
-        html.H1(children='Non ARS not strict')
-    ], className='header'),
-    html.Div([
-        dcc.Graph(figure=similarity_barplots_dis_ns),
-    ])
 ])
 
 # Run the app

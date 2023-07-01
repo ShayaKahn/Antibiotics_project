@@ -9,7 +9,7 @@ from OTU_fit import OtuFit
 from IDOA_D_after_perturbation import IDOA_D
 from GLV_model import GLV
 from overlap import Overlap
-from Non_vanishing_BC import NonV
+from compare_to_shuffled import ShuffledVsNormal
 from Jaccard_disappeared_species import JaccardDisappearedSpecies
 import matplotlib.pyplot as plt
 from glv_functions import f
@@ -273,10 +273,10 @@ class Test_NonV(unittest.TestCase):
 
         #self.ABX_set = np.array([0.5, 0, 0, 0.5, 0, 0, 0])
 
-        self.nonv = NonV(self.baseline_sample, self.ABX_set, self.future_sample, self.baseline_cohort)
+        self.nonv = ShuffledVsNormal(self.baseline_sample, self.ABX_set, self.future_sample, self.baseline_cohort)
 
     def test_calculate_BC(self):
-        nonv_val = self.nonv.calculate_BC()
+        nonv_val = self.nonv.BC()
         print(nonv_val)
         print(self.nonv.baseline_sub_sample)
         print(self.nonv.future_sub_sample)
