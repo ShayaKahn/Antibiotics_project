@@ -26,10 +26,6 @@ def filter_data(df):
     mean_values = df[columns_to_check].mean(axis=1)
     condition_mask = mean_values >= 0.0001
     df = df[condition_mask]
-    non_zero_mask = df.ne(0)
-    non_zero_counts = non_zero_mask.sum(axis=1)
-    condition_mask = non_zero_counts >= 2
-    rel_abund_rarefied = df[condition_mask]
     return df
 
 def create_barplots(baseline_cohort, end_cohort, overlap_type, names, rows, cols):
@@ -126,7 +122,7 @@ aFMT_antibiotics_1 = df.iloc[:, 8].values   # day 2 of antibiotics.
 aFMT_intervention_1 = df.iloc[:, 9:19].values  # days 1,2,3,4,5,14,21,28,42,56 of intervention.
 aFMT_month_1 = df.iloc[:, 19:24].values  # months after the end of intervention 1,2,3,4,6.
 
-aFMT_baseline_2 = df.iloc[:, 24:30].values  # 123567 of baseline.
+aFMT_baseline_2 = df.iloc[:, 24:30].values  # 1,2,3,5,6,7 of baseline.
 aFMT_antibiotics_2 = df.iloc[:, 30:35].values   # days 2,4,5,6,7  of antibiotics.
 aFMT_intervention_2 = df.iloc[:, 35:47].values  # days 1,2,3,4,5,6,7,14,21,28,42,56 of intervention.
 aFMT_month_2 = df.iloc[:, 47:52].values  # months after the end of intervention 2,3,4,5,6.
@@ -421,6 +417,10 @@ baseline_dict = {'aFMT_1': aFMT_baseline_1.T, 'aFMT_2': aFMT_baseline_2.T, 'aFMT
                  'spo_2': spo_baseline_2.T, 'spo_3': spo_baseline_3.T, 'spo_4': spo_baseline_4.T,
                  'spo_5': spo_baseline_5.T, 'spo_6': spo_baseline_6.T, 'spo_7': spo_baseline_7.T}
 
+baseline_list = list(baseline_dict.values())
+baseline_total_matrix = np.concatenate(baseline_list, axis=0)
+baseline_total_matrix = normalize_cohort(baseline_total_matrix)
+
 baseline_cohort_opt = OptimalCohort(baseline_dict)
 baseline_cohort, chosen_indices = baseline_cohort_opt.get_optimal_samples()
 
@@ -432,6 +432,11 @@ Future_cohort = np.vstack([aFMT_subject_1_month_dict['6'], aFMT_subject_2_month_
                            spo_subject_2_month_dict['6'], spo_subject_3_month_dict['6'], spo_subject_4_int_dict['56'],
                            spo_subject_5_month_dict['6'], spo_subject_6_int_dict['56'], spo_subject_7_int_dict['56']])
 
+Future_cohort_spo = np.vstack([spo_subject_1_month_dict['6'], spo_subject_2_month_dict['6'],
+                               spo_subject_3_month_dict['6'], spo_subject_4_int_dict['56'],
+                               spo_subject_5_month_dict['6'], spo_subject_6_int_dict['56'],
+                               spo_subject_7_int_dict['56']])
+
 Future_cohort = normalize_cohort(Future_cohort)
 
 ABX_cohort = np.vstack([aFMT_subject_1_ant_dict['2'], aFMT_subject_2_ant_dict['7'], aFMT_subject_3_ant_dict['7'],
@@ -441,6 +446,18 @@ ABX_cohort = np.vstack([aFMT_subject_1_ant_dict['2'], aFMT_subject_2_ant_dict['7
                         pro_subject_7_ant_dict['7'], pro_subject_8_ant_dict['7'], spo_subject_1_ant_dict['7'],
                         spo_subject_2_ant_dict['7'], spo_subject_3_ant_dict['7'], spo_subject_4_ant_dict['7'],
                         spo_subject_5_ant_dict['7'], spo_subject_6_ant_dict['7'], spo_subject_7_ant_dict['7']])
+
+ABX_dict = {'aFMT_1': aFMT_antibiotics_1.reshape(-1, 1).T, 'aFMT_2': aFMT_antibiotics_2.T, 'aFMT_3': aFMT_antibiotics_3.T,
+            'aFMT_4': aFMT_antibiotics_4.T, 'aFMT_5': aFMT_antibiotics_5.T, 'aFMT_6': aFMT_antibiotics_6.T,
+            'pro_1': pro_antibiotics_1.T, 'pro_2': pro_antibiotics_2.T, 'pro_3': pro_antibiotics_3.T,
+            'pro_4': pro_antibiotics_4.T, 'pro_5': pro_antibiotics_5.T, 'pro_6': pro_antibiotics_6.T,
+            'pro_7': pro_antibiotics_7.T, 'pro_8': pro_antibiotics_8.T, 'spo_1': spo_antibiotics_1.T,
+            'spo_2': spo_antibiotics_2.T, 'spo_3': spo_antibiotics_3.T, 'spo_4': spo_antibiotics_4.T,
+            'spo_5': spo_antibiotics_5.T, 'spo_6': spo_antibiotics_6.T, 'spo_7': spo_antibiotics_7.T}
+
+ABX_list = list(ABX_dict.values())
+ABX_total_matrix = np.concatenate(ABX_list, axis=0)
+ABX_total_matrix = normalize_cohort(ABX_total_matrix)
 
 names = ['aFMT Subject 1', 'aFMT Subject 2', 'aFMT Subject 3', 'aFMT Subject 4', 'aFMT Subject 5', 'aFMT Subject 6',
          'Pro Subject 1', 'Pro Subject 2', 'Pro Subject 3', 'Pro Subject 4', 'Pro Subject 5', 'Pro Subject 6',
@@ -715,7 +732,7 @@ results = []
 for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_cohort, Future_cohort,
                                                             ABX_cohort)):
     J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
-                                Baseline_cohort=baseline_cohort, index=idx, mean_num=10)
+                                Baseline_cohort=baseline_cohort, index=idx, mean_num=100)
     results.append(J_object.Jaccard())
 
 real_vals, shuffled_vals = zip(*results)
@@ -754,7 +771,7 @@ results = []
 for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_cohort, Future_cohort,
                                                             ABX_cohort)):
     J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
-                                Baseline_cohort=baseline_cohort, index=idx, strict=True, mean_num=10)
+                                Baseline_cohort=baseline_cohort, index=idx, strict=True, mean_num=100)
     results.append(J_object.Jaccard())
 
 real_vals, shuffled_vals = zip(*results)
@@ -811,6 +828,9 @@ baseline_columns = ['ERAS1_Dag0', 'ERAS2_Dag0', 'ERAS3_Dag0', 'ERAS4_Dag0', 'ERA
                     'ERAS6_Dag0', 'ERAS7_Dag0', 'ERAS8_Dag0', 'ERAS9_Dag0', 'ERAS10_Dag0',
                     'ERAS11_Dag0', 'ERAS12_Dag0']
 
+baseline_columns_appear_4 = ['ERAS2_Dag0', 'ERAS3_Dag0', 'ERAS4_Dag0', 'ERAS5_Dag0',
+                             'ERAS6_Dag0', 'ERAS7_Dag0', 'ERAS9_Dag0', 'ERAS11_Dag0', 'ERAS12_Dag0']
+
 columns_4 = ['ERAS2_Dag4opt', 'ERAS3_Dag4', 'ERAS4_Dag4opt', 'ERAS5_Dag4', 'ERAS6_Dag4opt',
              'ERAS7_Dag4opt', 'ERAS9_Dag4', 'ERAS11_Dag4opt', 'ERAS12_Dag4opt']
 
@@ -823,9 +843,16 @@ columns_42 = ['ERAS1_Dag42', 'ERAS2_Dag42', 'ERAS3_Dag42', 'ERAS4_Dag42', 'ERAS5
 columns_180 = ['ERAS1_Dag180', 'ERAS2_Dag180', 'ERAS3_Dag180', 'ERAS4_Dag180', 'ERAS5_Dag180', 'ERAS6_Dag180',
                 'ERAS7_Dag180', 'ERAS8_Dag180', 'ERAS9_Dag180', 'ERAS10_Dag180', 'ERAS11_Dag180', 'ERAS12_Dag180']
 
+columns_180_appear_4 = ['ERAS2_Dag180', 'ERAS3_Dag180', 'ERAS4_Dag180', 'ERAS5_Dag180', 'ERAS6_Dag180',
+                        'ERAS7_Dag180', 'ERAS9_Dag180', 'ERAS11_Dag180', 'ERAS12_Dag180']
+
 baseline_rel_abund_rarefied = rel_abund_rarefied[baseline_columns].values
 baseline_rel_abund_rarefied = baseline_rel_abund_rarefied.T
 baseline_rel_abund_rarefied = normalize_cohort(baseline_rel_abund_rarefied)
+
+baseline_rel_abund_rarefied_appear_4 = rel_abund_rarefied[baseline_columns_appear_4].values
+baseline_rel_abund_rarefied_appear_4 = baseline_rel_abund_rarefied_appear_4.T
+baseline_rel_abund_rarefied_appear_4 = normalize_cohort(baseline_rel_abund_rarefied_appear_4)
 
 rel_abund_rarefied_4 = rel_abund_rarefied[columns_4].values
 rel_abund_rarefied_4 = rel_abund_rarefied_4.T
@@ -842,6 +869,10 @@ rel_abund_rarefied_42 = normalize_cohort(rel_abund_rarefied_42)
 rel_abund_rarefied_180 = rel_abund_rarefied[columns_180].values
 rel_abund_rarefied_180 = rel_abund_rarefied_180.T
 rel_abund_rarefied_180 = normalize_cohort(rel_abund_rarefied_180)
+
+rel_abund_rarefied_180_appear_4 = rel_abund_rarefied[columns_180_appear_4].values
+rel_abund_rarefied_180_appear_4 = rel_abund_rarefied_180_appear_4.T
+rel_abund_rarefied_180_appear_4 = normalize_cohort(rel_abund_rarefied_180_appear_4)
 
 baseline_rel_abund = rel_abund[baseline_columns].values
 baseline_rel_abund = baseline_rel_abund.T
@@ -860,6 +891,10 @@ names = ['Subject 1', 'Subject 2', 'Subject 3', 'Subject 4', 'Subject 5', 'Subje
 
 similarity_barplots_jaccard_recovery = create_barplots(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
                                                        "Jaccard", names, rows=6, cols=2)[0]
+similarity_barplots_jaccard_recovery_self = create_barplots(baseline_rel_abund_rarefied, baseline_rel_abund_rarefied,
+                                                            "Jaccard", names, rows=6, cols=2)[0]
+similarity_barplots_jaccard_recovery_ABX = create_barplots(baseline_rel_abund_rarefied, rel_abund_rarefied_8,
+                                                           "Jaccard", names, rows=6, cols=2)[0]
 results_jaccard_recovery = np.vstack(create_barplots(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
                                                      "Jaccard", names, rows=6, cols=2)[1])
 
@@ -926,14 +961,23 @@ delta_Jaccard_vs_num_abx = go.Figure(data=go.Scatter(x=intersect_of_intersect_co
                                                      y=similarities_filterd,
                                                      mode='markers'))
 
+delta_Jaccard_vs_num_abx.update_layout(
+    xaxis={'title': 'Number of Resistant Species'},
+    yaxis={'title': 'Filtered Jaccard'},
+    width=500,
+    height=500,
+    plot_bgcolor='white'
+)
+
 # Calculate Binary Jaccard Index of each future sample from the baseline samples considering only the non ARS according
 # each subject's specific ARS set.
 
 # Strict
-
+sets_container = []
 Jaccard_sets_container = []
 for base, future, abx in zip(baseline_rel_abund_rarefied, rel_abund_rarefied_180, rel_abund_rarefied_8):
     object = JaccardDisappearedSpecies(base, future, abx, strict=True)
+    sets_container.append(np.setdiff1d(object.nonzero_ABX, object.intersect_of_intersect))
     Jaccard_set = []
     for sample_base in baseline_rel_abund_rarefied:
         Jaccard_set.append(object.calc_jaccard(sample_base))
@@ -962,6 +1006,20 @@ similarity_barplots_dis.update_yaxes(linecolor='black', linewidth=2, mirror=Fals
 # Update layout
 similarity_barplots_dis.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
 
+############################################
+Jaccard_sets_container = []
+Jaccard_vals = []
+for base, abx, sets in zip(baseline_rel_abund_rarefied, rel_abund_rarefied_8, sets_container):
+    mask = np.ones(len(base), dtype=bool)
+    mask[sets] = False
+    # Create the new vector with the complement of the indexes
+    new_base = base[mask]
+    new_abx = abx[mask]
+    J_object = Overlap(new_base, new_abx, overlap_type='Jaccard')
+    Jaccard_vals.append(J_object.calculate_overlap())
+
+print(Jaccard_vals)
+############################################
 
 # No strict
 
@@ -996,14 +1054,6 @@ similarity_barplots_dis_ns.update_yaxes(linecolor='black', linewidth=2, mirror=F
 # Update layout
 similarity_barplots_dis_ns.update_layout(height=1000, width=1200, showlegend=False, plot_bgcolor='white')
 
-delta_Jaccard_vs_num_abx.update_layout(
-    xaxis={'title': 'Number of Resistant Species'},
-    yaxis={'title': 'Filtered Jaccard'},
-    width=500,
-    height=500,
-    plot_bgcolor='white'
-)
-
 # Compare Binary Jaccard index between real and shuffled samples without including ARS species
 
 # No strict
@@ -1013,7 +1063,7 @@ results = []
 for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
                                                             rel_abund_rarefied_8)):
     J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
-                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, mean_num=10)
+                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, mean_num=100)
     results.append(J_object.Jaccard())
 
 real_vals, shuffled_vals = zip(*results)
@@ -1043,7 +1093,7 @@ results = []
 for idx, (sample_base, sample_future, ant) in enumerate(zip(baseline_rel_abund_rarefied, rel_abund_rarefied_180,
                                                             rel_abund_rarefied_8)):
     J_object = ShuffledVsNormal(Baseline_sample=sample_base, ABX_sample=ant, Future_sample=sample_future,
-                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, strict=True, mean_num=10)
+                                Baseline_cohort=baseline_rel_abund_rarefied, index=idx, strict=True, mean_num=100)
     results.append(J_object.Jaccard())
 
 real_vals, shuffled_vals = zip(*results)
@@ -1078,15 +1128,15 @@ num_samples_4 = np.size(baseline_rel_abund_rarefied, axis=0)
 
 # Create the scatter plots
 PCoA_bace = go.Scatter(x=scaled[:num_samples, 0], y=scaled[:num_samples, 1], marker={"color": "blue"},
-                       name='Baseline', mode="markers")
+                       name='Baseline', mode="markers", text=[str(i+1) for i in range(num_samples)])
 PCoA_4 = go.Scatter(x=scaled[num_samples:21, 0], y=scaled[num_samples:21, 1], marker={"color": "red"},
-                    name='D4', mode="markers")
+                    name='D4', mode="markers", text=[str(i+1) for i in range(num_samples_4)])
 PCoA_8 = go.Scatter(x=scaled[21:33, 0], y=scaled[21:33, 1], marker={"color": "green"},
-                    name='D8', mode="markers")
+                    name='D8', mode="markers", text=[str(i+1) for i in range(num_samples)])
 PCoA_42 = go.Scatter(x=scaled[33:45, 0], y=scaled[33:45, 1], marker={"color": "grey"},
-                     name='D42', mode="markers")
+                     name='D42', mode="markers", text=[str(i+1) for i in range(num_samples)])
 PCoA_180 = go.Scatter(x=scaled[45:, 0], y=scaled[45:, 1], marker={"color": "black"},
-                      name='D180', mode="markers")
+                      name='D180', mode="markers", text=[str(i+1) for i in range(num_samples)])
 
 ellipse_bace = confidence_ellipse(x=scaled[:num_samples, 0], y=scaled[:num_samples, 1],
                                   n_std=1.96, line=dict(color='blue'), name='Confidence Ellipse base')
@@ -1108,7 +1158,30 @@ PCoA_fig.update_xaxes(zeroline=False)
 PCoA_fig.update_yaxes(zeroline=False)
 
 # Update the layout
-PCoA_fig.update_layout(height=500, width=500, showlegend=False, plot_bgcolor='white')
+PCoA_fig.update_layout(height=750, width=750, showlegend=False, plot_bgcolor='white')
+
+# Species barplots
+mean_base = baseline_rel_abund_rarefied.mean(axis=0)
+mean_ABX = rel_abund_rarefied_8.mean(axis=0)
+mean_future = rel_abund_rarefied_180.mean(axis=0)
+
+# Create the subplots
+mean_barplots = make_subplots(rows=3, cols=1, shared_xaxes=True)
+
+# Add bar traces to the subplots
+mean_barplots.add_trace(go.Bar(x=np.arange(1, len(mean_base)+1, 1), y=mean_base, name='DO'), row=1, col=1)
+mean_barplots.add_trace(go.Bar(x=np.arange(1, len(mean_base)+1, 1), y=mean_ABX, name='D8'), row=2, col=1)
+mean_barplots.add_trace(go.Bar(x=np.arange(1, len(mean_base)+1, 1), y=mean_future, name='D180'), row=3, col=1)
+
+# Update layout for each subplot
+mean_barplots.update_xaxes(title_text='Species', row=3, col=1)
+
+mean_barplots.update_yaxes(title_text='Mean relative abundance', row=1, col=1)
+mean_barplots.update_yaxes(title_text='Mean relative abundance', row=2, col=1)
+mean_barplots.update_yaxes(title_text='Mean relative abundance', row=3, col=1)
+
+mean_barplots.update_layout(height=1100, width=1200,
+                            title_text='Mean relative abundance of species', plot_bgcolor='white')
 
 app = Dash(__name__)
 
@@ -1187,10 +1260,22 @@ app.layout = html.Div([
     #    )
     #]),
     html.Div([
+        html.H1(children='Jaccard for all species - Baseline')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=similarity_barplots_jaccard_recovery_self),
+    ]),
+    html.Div([
         html.H1(children='Jaccard for all species')
     ], className='header'),
     html.Div([
         dcc.Graph(figure=similarity_barplots_jaccard_recovery),
+    ]),
+    html.Div([
+        html.H1(children='Jaccard for all species ABX vs Baseline')
+    ], className='header'),
+    html.Div([
+        dcc.Graph(figure=similarity_barplots_jaccard_recovery_ABX),
     ]),
     #html.Div([
     #    html.H1(children='Overlap for all species')
@@ -1198,6 +1283,7 @@ app.layout = html.Div([
     #html.Div([
     #    dcc.Graph(figure=similarity_barplots_overlap_recovery),
     #]),
+    # <--------------------------------> #
     html.Div([
         html.H1(children='Non ARS strict')
     ], className='header'),
@@ -1228,8 +1314,11 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(figure=PCoA_fig),
     ]),
+    #html.Div([
+    #    dcc.Graph(figure=delta_Jaccard_vs_num_abx),
+    #]),
     html.Div([
-        dcc.Graph(figure=delta_Jaccard_vs_num_abx),
+        dcc.Graph(figure=mean_barplots),
     ]),
 ])
 
